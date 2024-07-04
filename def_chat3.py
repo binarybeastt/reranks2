@@ -70,22 +70,35 @@ def main():
                 original_data = query_result["matches"][id]  
                 results.append({
                     "text": text.split(']')[1].strip(),  
+                    'title': original_data['metadata']['title'],
                     "id": original_data["metadata"]["id"] 
                 })
             ids = [d['id'] for d in results]
-            filtered_df = df[df['id'].isin(ids)]
-            filtered_df['id'] = pd.Categorical(filtered_df['id'], categories=ids, ordered=True)
-            filtered_df = filtered_df.sort_values('id')
+            results_df = pd.DataFrame(results)
+            merged_df = pd.merge(results_df, df[['id', 'url', 'keyword']], on='id', how='left')
+            merged_df['id'] = pd.Categorical(merged_df['id'], categories=ids, ordered=True)
+            merged_df = merged_df.sort_values('id')
+            # ids = [d['id'] for d in results]
+            # filtered_df = df[df['id'].isin(ids)]
+            # filtered_df['id'] = pd.Categorical(filtered_df['id'], categories=ids, ordered=True)
+            # filtered_df = filtered_df.sort_values('id')
 
-            match_ids =[m['metadata']['id'] for m in query_result['matches']]
-            filtered_df2 = df[df['id'].isin(match_ids)]
-            attributes_to_extract = ['text', 'url', 'id', 'title', 'keyword']
-            extracted_df = filtered_df2[attributes_to_extract]
+            results_1 = []
+            for match in query_result['matches']:
+                id = match.get('metadata', {}).get('id', '')           
+                title = match.get('metadata', {}).get('title', '')
+                text = match.get('metadata', {}).get('text', '')
+                results_1.append({"id": id, "title": title, 'text': text})
+            ids_2 = [d['id'] for d in results_1]
+            results2_df = pd.DataFrame(results_1)
+            merged2_df = pd.merge(results2_df, df[['id', 'url', 'keyword']], on='id', how='left')
+            merged2_df['id'] = pd.Categorical(merged2_df['id'], categories=ids_2, ordered=True)
+            merged2_df = merged2_df.sort_values('id')
 
             st.text('Unranked Results')
-            st.table(pd.DataFrame(filtered_df))
+            st.table(pd.DataFrame(merged2_df))
             st.text('Reranked Results')
-            st.table(pd.DataFrame(extracted_df))
+            st.table(pd.DataFrame(merged_df))
 
 if __name__ == "__main__":
     main()
